@@ -2,6 +2,9 @@
 
 forge XdvFsUtilsCli {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_INVALID_TOOL: UInt32 = 1;
+
     const TOOL_PROBE: UInt32 = 1;
     const TOOL_PARTITION: UInt32 = 2;
     const TOOL_MKFS: UInt32 = 3;
@@ -14,69 +17,92 @@ forge XdvFsUtilsCli {
 
     proc K::run_probe(device: Str) {
         emit "xdvfs-utils: run probe tool";
-        blkid(device);
-        return 0;
+        let kind = blkid(device);
+        if kind == 0 {
+            return STATUS_INVALID_TOOL;
+        } else {
+            return lsblk();
+        }
     }
 
     proc K::run_partition(device: Str) {
         emit "xdvfs-utils: run partition tool";
-        fdisk_print(device);
-        return 0;
+        return fdisk_print(device);
     }
 
     proc K::run_mkfs(device: Str) {
         emit "xdvfs-utils: run mkfs tool";
-        mkfs_xdvfs(device);
-        return 0;
+        return mkfs_xdvfs(device);
     }
 
     proc K::run_fsck(device: Str) {
         emit "xdvfs-utils: run fsck tool";
-        fsck_xdvfs(device, 1);
-        return 0;
+        return fsck_xdvfs(device, 1);
     }
 
     proc K::run_dir(path: Str) {
         emit "xdvfs-utils: run dir tool";
-        dir_ls(path, 0);
-        return 0;
+        return dir_ls(path, 0);
     }
 
     proc K::run_file(path: Str) {
         emit "xdvfs-utils: run file tool";
-        file_touch(path);
-        return 0;
+        return file_touch(path);
     }
 
     proc K::run_mount(device: Str) {
         emit "xdvfs-utils: run mount tool";
-        mount_xdvfs(device, "/");
-        return 0;
+        return mount_xdvfs(device, "/");
     }
 
     proc K::run_space(target: Str) {
         emit "xdvfs-utils: run space tool";
-        space_df(target, "/");
-        return 0;
+        return space_df(target, "/");
     }
 
     proc K::run_perm(path: Str) {
         emit "xdvfs-utils: run perm tool";
-        perm_chmod(path, 420);
-        return 0;
+        return perm_chmod(path, 420);
     }
 
     proc K::run(tool: UInt32, device: Str) {
         emit "xdvfs-utils: dispatch";
-        run_probe(device);
-        run_partition(device);
-        run_mkfs(device);
-        run_fsck(device);
-        run_dir(device);
-        run_file(device);
-        run_mount(device);
-        run_space(device);
-        run_perm(device);
-        return 0;
+        if tool == TOOL_PROBE {
+            return run_probe(device);
+        } else {
+            if tool == TOOL_PARTITION {
+                return run_partition(device);
+            } else {
+                if tool == TOOL_MKFS {
+                    return run_mkfs(device);
+                } else {
+                    if tool == TOOL_FSCK {
+                        return run_fsck(device);
+                    } else {
+                        if tool == TOOL_DIR {
+                            return run_dir(device);
+                        } else {
+                            if tool == TOOL_FILE {
+                                return run_file(device);
+                            } else {
+                                if tool == TOOL_MOUNT {
+                                    return run_mount(device);
+                                } else {
+                                    if tool == TOOL_SPACE {
+                                        return run_space(device);
+                                    } else {
+                                        if tool == TOOL_PERM {
+                                            return run_perm(device);
+                                        } else {
+                                            return STATUS_INVALID_TOOL;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

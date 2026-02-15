@@ -3,42 +3,123 @@
 
 forge XdvFsUtilsPartition {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_INVALID_DEVICE: UInt32 = 1;
+    const STATUS_PARTITION_OP_FAILED: UInt32 = 2;
+    const STATUS_INVALID_PARTITION_TYPE: UInt32 = 3;
+
     const LABEL_MBR: UInt32 = 1;
     const LABEL_GPT: UInt32 = 2;
+    const PARTITION_STYLE_NONE: UInt32 = 0;
 
     const PARTITION_TYPE_XDVFS: UInt32 = 227;
     const PARTITION_TYPE_LINUX: UInt32 = 131;
     const PARTITION_TYPE_FAT32_LBA: UInt32 = 12;
 
+    const PARTITION_OK: UInt32 = 0;
+    const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
+    const DEFAULT_PARTITION_SECTORS: UInt64 = 65536;
+
+    proc K::is_supported_partition_type(partition_type: UInt32) {
+        if partition_type == PARTITION_TYPE_XDVFS {
+            return STATUS_OK;
+        } else {
+            if partition_type == PARTITION_TYPE_LINUX {
+                return STATUS_OK;
+            } else {
+                if partition_type == PARTITION_TYPE_FAT32_LBA {
+                    return STATUS_OK;
+                } else {
+                    return STATUS_INVALID_PARTITION_TYPE;
+                }
+            }
+        }
+    }
+
     proc K::fdisk_print(device: Str) {
         emit "xdvfs-utils: fdisk print";
-        probe_standard_storage();
-        detect_partition_table(0);
-        enumerate_partitions(0);
-        return 0;
+
+        let probe = probe_standard_storage();
+        if probe == 0 {
+            return STATUS_INVALID_DEVICE;
+        } else {
+            let style = detect_partition_table(DEFAULT_DEVICE_HANDLE);
+            if style == PARTITION_STYLE_NONE {
+                return STATUS_PARTITION_OP_FAILED;
+            } else {
+                let count = enumerate_partitions(DEFAULT_DEVICE_HANDLE);
+                if count == 0 {
+                    return STATUS_PARTITION_OP_FAILED;
+                } else {
+                    return STATUS_OK;
+                }
+            }
+        }
     }
 
     proc K::fdisk_create_mbr(device: Str) {
         emit "xdvfs-utils: create MBR";
-        create_mbr_partition_table(0);
-        return 0;
+
+        let mbr_status = create_mbr_partition_table(DEFAULT_DEVICE_HANDLE);
+        if mbr_status == PARTITION_OK {
+            let start_lba = layout_mbr_64m();
+            let part_index = create_partition(DEFAULT_DEVICE_HANDLE, start_lba, DEFAULT_PARTITION_SECTORS, PARTITION_TYPE_XDVFS);
+            if part_index == 0 {
+                return STATUS_PARTITION_OP_FAILED;
+            } else {
+                let bootable = set_partition_bootable(DEFAULT_DEVICE_HANDLE, part_index);
+                if bootable == PARTITION_OK {
+                    return STATUS_OK;
+                } else {
+                    return STATUS_PARTITION_OP_FAILED;
+                }
+            }
+        } else {
+            return STATUS_PARTITION_OP_FAILED;
+        }
     }
 
     proc K::fdisk_create_gpt(device: Str) {
         emit "xdvfs-utils: create GPT";
-        create_gpt_partition_table(0);
-        return 0;
+
+        let gpt_status = create_gpt_partition_table(DEFAULT_DEVICE_HANDLE);
+        if gpt_status == PARTITION_OK {
+            let start_lba = layout_mbr_64m();
+            let part_index = create_partition(DEFAULT_DEVICE_HANDLE, start_lba, DEFAULT_PARTITION_SECTORS, PARTITION_TYPE_XDVFS);
+            if part_index == 0 {
+                return STATUS_PARTITION_OP_FAILED;
+            } else {
+                return STATUS_OK;
+            }
+        } else {
+            return STATUS_PARTITION_OP_FAILED;
+        }
     }
 
     proc K::fdisk_add_partition(device: Str, start_lba: UInt64, sector_count: UInt64, partition_type: UInt32) {
         emit "xdvfs-utils: add partition";
-        create_partition(0, start_lba, sector_count, partition_type);
-        return 0;
+
+        let type_ok = is_supported_partition_type(partition_type);
+        if type_ok == STATUS_OK {
+            let part_index = create_partition(DEFAULT_DEVICE_HANDLE, start_lba, sector_count, partition_type);
+            if part_index == 0 {
+                return STATUS_PARTITION_OP_FAILED;
+            } else {
+                return STATUS_OK;
+            }
+        } else {
+            return STATUS_INVALID_PARTITION_TYPE;
+        }
     }
 
     proc K::fdisk_set_bootable(device: Str, partition_index: UInt32) {
         emit "xdvfs-utils: set bootable partition";
-        set_partition_bootable(0, partition_index);
-        return 0;
+
+        let status = set_partition_bootable(DEFAULT_DEVICE_HANDLE, partition_index);
+        if status == PARTITION_OK {
+            return STATUS_OK;
+        } else {
+            return STATUS_PARTITION_OP_FAILED;
+        }
     }
 }

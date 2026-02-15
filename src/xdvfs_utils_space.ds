@@ -3,38 +3,94 @@
 
 forge XdvFsUtilsSpace {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_SPACE_FAILED: UInt32 = 1;
+    const STATUS_PATH_NOT_FOUND: UInt32 = 2;
+
     const ROOT_INODE: UInt64 = 2;
     const IO_SAMPLE_SECTORS: UInt32 = 128;
 
+    const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
+    const INVALID_RESULT: UInt32 = 0;
+
     proc K::space_df(device: Str, mount_point: Str) {
         emit "xdvfs-utils: df";
-        probe_standard_storage();
-        mount(device, mount_point, "xdvfs", 0);
-        get_fs_stats(0);
-        return 0;
+        let probe = probe_standard_storage();
+        if probe == 0 {
+            return STATUS_SPACE_FAILED;
+        } else {
+            let mount_status = mount(device, mount_point, "xdvfs", 0);
+            if mount_status == STATUS_OK {
+                let stats = get_fs_stats(DEFAULT_DEVICE_HANDLE);
+                if stats == INVALID_RESULT {
+                    return STATUS_SPACE_FAILED;
+                } else {
+                    return STATUS_OK;
+                }
+            } else {
+                return STATUS_SPACE_FAILED;
+            }
+        }
     }
 
     proc K::space_du(path: Str) {
         emit "xdvfs-utils: du";
-        lookup(ROOT_INODE, path);
-        readdir(ROOT_INODE);
-        return 0;
+        let inode = lookup(ROOT_INODE, path);
+        if inode == 0 {
+            return STATUS_PATH_NOT_FOUND;
+        } else {
+            let dir_entry = readdir(ROOT_INODE);
+            if dir_entry == 0 {
+                return STATUS_SPACE_FAILED;
+            } else {
+                return STATUS_OK;
+            }
+        }
     }
 
     proc K::space_stat(path: Str) {
         emit "xdvfs-utils: stat";
-        lookup(ROOT_INODE, path);
-        get_inode(ROOT_INODE);
-        return 0;
+        let inode = lookup(ROOT_INODE, path);
+        if inode == 0 {
+            return STATUS_PATH_NOT_FOUND;
+        } else {
+            let inode_data = get_inode(inode);
+            if inode_data == 0 {
+                return STATUS_SPACE_FAILED;
+            } else {
+                return STATUS_OK;
+            }
+        }
     }
 
     proc K::space_iostat(device: Str) {
         emit "xdvfs-utils: iostat";
-        probe_standard_storage();
-        get_logical_sector_size(0);
-        read_sectors(0, 0, IO_SAMPLE_SECTORS);
-        write_sectors(0, 0, IO_SAMPLE_SECTORS);
-        flush_storage_cache(0);
-        return 0;
+
+        let probe = probe_standard_storage();
+        if probe == 0 {
+            return STATUS_SPACE_FAILED;
+        } else {
+            let sector_size = get_logical_sector_size(DEFAULT_DEVICE_HANDLE);
+            if sector_size == 0 {
+                return STATUS_SPACE_FAILED;
+            } else {
+                let read_count = read_sectors(DEFAULT_DEVICE_HANDLE, 0, IO_SAMPLE_SECTORS);
+                if read_count == IO_SAMPLE_SECTORS {
+                    let write_count = write_sectors(DEFAULT_DEVICE_HANDLE, 0, IO_SAMPLE_SECTORS);
+                    if write_count == IO_SAMPLE_SECTORS {
+                        let flush_status = flush_storage_cache(DEFAULT_DEVICE_HANDLE);
+                        if flush_status == STATUS_OK {
+                            return STATUS_OK;
+                        } else {
+                            return STATUS_SPACE_FAILED;
+                        }
+                    } else {
+                        return STATUS_SPACE_FAILED;
+                    }
+                } else {
+                    return STATUS_SPACE_FAILED;
+                }
+            }
+        }
     }
 }

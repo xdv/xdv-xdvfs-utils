@@ -3,27 +3,73 @@
 
 forge XdvFsUtilsProbe {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_PROBE_FAILED: UInt32 = 1;
+    const STATUS_PARTITION_UNKNOWN: UInt32 = 2;
+    const STATUS_SUPERBLOCK_INVALID: UInt32 = 3;
+
     const FS_KIND_UNKNOWN: UInt32 = 0;
     const FS_KIND_XDVFS: UInt32 = 1;
 
+    const PARTITION_STYLE_NONE: UInt32 = 0;
+    const SUPERBLOCK_OK: UInt32 = 1;
+
+    const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
+    const DEFAULT_TOTAL_BLOCKS: UInt64 = 16384;
+
     proc K::blkid(device: Str) {
         emit "xdvfs-utils: blkid probe";
-        probe_standard_storage();
-        detect_partition_table(0);
-        validate_superblock(0);
-        return FS_KIND_XDVFS;
+
+        let bus_probe = probe_standard_storage();
+        if bus_probe == 0 {
+            return FS_KIND_UNKNOWN;
+        } else {
+            let partition_style = detect_partition_table(DEFAULT_DEVICE_HANDLE);
+            if partition_style == PARTITION_STYLE_NONE {
+                return FS_KIND_UNKNOWN;
+            } else {
+                let sb = create_superblock(DEFAULT_TOTAL_BLOCKS);
+                if sb == 0 {
+                    return FS_KIND_UNKNOWN;
+                } else {
+                    let sb_valid = validate_superblock(sb);
+                    if sb_valid == SUPERBLOCK_OK {
+                        return FS_KIND_XDVFS;
+                    } else {
+                        return FS_KIND_UNKNOWN;
+                    }
+                }
+            }
+        }
     }
 
     proc K::lsblk() {
         emit "xdvfs-utils: lsblk enumerate";
-        probe_standard_storage();
-        enumerate_block_devices();
-        enumerate_partitions(0);
-        return 0;
+
+        let device_count = enumerate_block_devices();
+        if device_count == 0 {
+            return STATUS_PROBE_FAILED;
+        } else {
+            let partition_count = enumerate_partitions(DEFAULT_DEVICE_HANDLE);
+            if partition_count == 0 {
+                return STATUS_PARTITION_UNKNOWN;
+            } else {
+                return STATUS_OK;
+            }
+        }
     }
 
     proc K::probe_all() {
-        lsblk();
-        return 0;
+        let fs_kind = blkid("all");
+        let list_status = lsblk();
+        if fs_kind == FS_KIND_XDVFS {
+            if list_status == STATUS_OK {
+                return STATUS_OK;
+            } else {
+                return list_status;
+            }
+        } else {
+            return STATUS_SUPERBLOCK_INVALID;
+        }
     }
 }

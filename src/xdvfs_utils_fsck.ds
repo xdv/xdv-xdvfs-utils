@@ -3,26 +3,55 @@
 
 forge XdvFsUtilsFsck {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_FSCK_FAILED: UInt32 = 1;
+    const STATUS_REPAIR_REQUIRED: UInt32 = 2;
+
     const REPAIR_MODE_NONE: UInt32 = 0;
     const REPAIR_MODE_SAFE: UInt32 = 1;
     const REPAIR_MODE_AGGRESSIVE: UInt32 = 2;
 
+    const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
+    const DEFAULT_TOTAL_BLOCKS: UInt64 = 16384;
+    const SUPERBLOCK_OK: UInt32 = 1;
+
     proc K::fsck_xdvfs(device: Str, repair_mode: UInt32) {
         emit "xdvfs-utils: fsck.xdvfs start";
-        probe_standard_storage();
-        detect_partition_table(0);
-        validate_superblock(0);
-        emit "xdvfs-utils: fsck.xdvfs complete";
-        return 0;
+
+        let probe = probe_standard_storage();
+        if probe == 0 {
+            return STATUS_FSCK_FAILED;
+        } else {
+            let style = detect_partition_table(DEFAULT_DEVICE_HANDLE);
+            if style == 0 {
+                return STATUS_FSCK_FAILED;
+            } else {
+                let sb = create_superblock(DEFAULT_TOTAL_BLOCKS);
+                let valid = validate_superblock(sb);
+                if valid == SUPERBLOCK_OK {
+                    emit "xdvfs-utils: fsck.xdvfs complete";
+                    return STATUS_OK;
+                } else {
+                    if repair_mode == REPAIR_MODE_NONE {
+                        return STATUS_REPAIR_REQUIRED;
+                    } else {
+                        let repaired = format_filesystem(device);
+                        if repaired == STATUS_OK {
+                            return STATUS_OK;
+                        } else {
+                            return STATUS_FSCK_FAILED;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     proc K::fsck_auto_repair(device: Str) {
-        fsck_xdvfs(device, REPAIR_MODE_SAFE);
-        return 0;
+        return fsck_xdvfs(device, REPAIR_MODE_SAFE);
     }
 
     proc K::fsck_read_only(device: Str) {
-        fsck_xdvfs(device, REPAIR_MODE_NONE);
-        return 0;
+        return fsck_xdvfs(device, REPAIR_MODE_NONE);
     }
 }

@@ -3,48 +3,93 @@
 
 forge XdvFsUtilsDir {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_DIR_FAILED: UInt32 = 1;
+    const STATUS_DIR_NOT_FOUND: UInt32 = 2;
+
     const ROOT_INODE: UInt64 = 2;
     const DEFAULT_DIR_PERMS: UInt16 = 493;
     const LIST_RECURSIVE: UInt32 = 1;
     const DEFAULT_TREE_DEPTH: UInt32 = 8;
+    const DIR_ENTRY_NOT_FOUND: UInt64 = 0;
+    const DIR_OK: UInt32 = 0;
 
     proc K::dir_mkdir(name: Str) {
         emit "xdvfs-utils: dir mkdir";
-        mkdir(ROOT_INODE, name, DEFAULT_DIR_PERMS);
-        return 0;
+        let inode = mkdir(ROOT_INODE, name, DEFAULT_DIR_PERMS);
+        if inode == DIR_ENTRY_NOT_FOUND {
+            return STATUS_DIR_FAILED;
+        } else {
+            return STATUS_OK;
+        }
     }
 
     proc K::dir_mkdir_mode(name: Str, perms: UInt16) {
         emit "xdvfs-utils: dir mkdir mode";
-        mkdir(ROOT_INODE, name, perms);
-        return 0;
+        let inode = mkdir(ROOT_INODE, name, perms);
+        if inode == DIR_ENTRY_NOT_FOUND {
+            return STATUS_DIR_FAILED;
+        } else {
+            return STATUS_OK;
+        }
     }
 
     proc K::dir_ls(path: Str, flags: UInt32) {
         emit "xdvfs-utils: dir ls";
-        opendir(ROOT_INODE);
-        readdir(ROOT_INODE);
-        closedir(ROOT_INODE);
-        return 0;
+        let handle = opendir(ROOT_INODE);
+        if handle == DIR_ENTRY_NOT_FOUND {
+            return STATUS_DIR_NOT_FOUND;
+        } else {
+            let entry = readdir(handle);
+            let closed = closedir(handle);
+            if closed == DIR_OK {
+                if flags == LIST_RECURSIVE {
+                    dir_tree(path);
+                }
+                return STATUS_OK;
+            } else {
+                return STATUS_DIR_FAILED;
+            }
+        }
     }
 
     proc K::dir_tree(path: Str) {
         emit "xdvfs-utils: dir tree";
-        dir_ls(path, LIST_RECURSIVE);
-        return DEFAULT_TREE_DEPTH;
+        let list_status = dir_ls(path, LIST_RECURSIVE);
+        if list_status == STATUS_OK {
+            return DEFAULT_TREE_DEPTH;
+        } else {
+            return STATUS_DIR_FAILED;
+        }
     }
 
     proc K::dir_rm(name: Str) {
         emit "xdvfs-utils: dir rmdir";
-        rmdir(ROOT_INODE, name);
-        return 0;
+        let status = rmdir(ROOT_INODE, name);
+        if status == DIR_OK {
+            return STATUS_OK;
+        } else {
+            return STATUS_DIR_FAILED;
+        }
     }
 
     proc K::dir_mv(old_name: Str, new_name: Str) {
         emit "xdvfs-utils: dir rename";
-        lookup(ROOT_INODE, old_name);
-        remove_dir_entry(ROOT_INODE, old_name);
-        add_dir_entry(ROOT_INODE, new_name, ROOT_INODE + 1);
-        return 0;
+        let inode = lookup(ROOT_INODE, old_name);
+        if inode == DIR_ENTRY_NOT_FOUND {
+            return STATUS_DIR_NOT_FOUND;
+        } else {
+            let remove_status = remove_dir_entry(ROOT_INODE, old_name);
+            if remove_status == DIR_OK {
+                let add_status = add_dir_entry(ROOT_INODE, new_name, inode);
+                if add_status == DIR_OK {
+                    return STATUS_OK;
+                } else {
+                    return STATUS_DIR_FAILED;
+                }
+            } else {
+                return STATUS_DIR_FAILED;
+            }
+        }
     }
 }

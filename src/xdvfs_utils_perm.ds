@@ -3,36 +3,86 @@
 
 forge XdvFsUtilsPerm {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_PERM_FAILED: UInt32 = 1;
+    const STATUS_PATH_NOT_FOUND: UInt32 = 2;
+    const STATUS_INVALID_MODE: UInt32 = 3;
+
     const ROOT_INODE: UInt64 = 2;
     const DEFAULT_UMASK: UInt16 = 18;
+    const MAX_MODE: UInt16 = 511;
 
     proc K::perm_chmod(path: Str, mode: UInt16) {
         emit "xdvfs-utils: chmod";
-        lookup(ROOT_INODE, path);
-        get_inode(ROOT_INODE);
-        write_inode(ROOT_INODE);
-        return 0;
+        if mode > MAX_MODE {
+            return STATUS_INVALID_MODE;
+        } else {
+            let inode = lookup(ROOT_INODE, path);
+            if inode == 0 {
+                return STATUS_PATH_NOT_FOUND;
+            } else {
+                let loaded = get_inode(inode);
+                if loaded == 0 {
+                    return STATUS_PERM_FAILED;
+                } else {
+                    let write_status = write_inode(inode);
+                    if write_status == STATUS_OK {
+                        return STATUS_OK;
+                    } else {
+                        return STATUS_PERM_FAILED;
+                    }
+                }
+            }
+        }
     }
 
     proc K::perm_chown(path: Str, user_id: UInt32) {
         emit "xdvfs-utils: chown";
-        lookup(ROOT_INODE, path);
-        get_inode(ROOT_INODE);
-        write_inode(ROOT_INODE);
-        return 0;
+        let inode = lookup(ROOT_INODE, path);
+        if inode == 0 {
+            return STATUS_PATH_NOT_FOUND;
+        } else {
+            let loaded = get_inode(inode);
+            if loaded == 0 {
+                return STATUS_PERM_FAILED;
+            } else {
+                let write_status = write_inode(inode);
+                if write_status == STATUS_OK {
+                    return STATUS_OK;
+                } else {
+                    return STATUS_PERM_FAILED;
+                }
+            }
+        }
     }
 
     proc K::perm_chgrp(path: Str, group_id: UInt32) {
         emit "xdvfs-utils: chgrp";
-        lookup(ROOT_INODE, path);
-        get_inode(ROOT_INODE);
-        write_inode(ROOT_INODE);
-        return 0;
+        let inode = lookup(ROOT_INODE, path);
+        if inode == 0 {
+            return STATUS_PATH_NOT_FOUND;
+        } else {
+            let loaded = get_inode(inode);
+            if loaded == 0 {
+                return STATUS_PERM_FAILED;
+            } else {
+                let write_status = write_inode(inode);
+                if write_status == STATUS_OK {
+                    return STATUS_OK;
+                } else {
+                    return STATUS_PERM_FAILED;
+                }
+            }
+        }
     }
 
     proc K::perm_set_umask(mask: UInt16) {
         emit "xdvfs-utils: umask";
-        return mask;
+        if mask > MAX_MODE {
+            return DEFAULT_UMASK;
+        } else {
+            return mask;
+        }
     }
 
     proc K::perm_default_umask() {

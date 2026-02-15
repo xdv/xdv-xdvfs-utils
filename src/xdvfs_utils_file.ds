@@ -3,6 +3,11 @@
 
 forge XdvFsUtilsFile {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_FILE_FAILED: UInt32 = 1;
+    const STATUS_FILE_NOT_FOUND: UInt32 = 2;
+    const STATUS_FILE_IO_ERROR: UInt32 = 3;
+
     const ROOT_INODE: UInt64 = 2;
     const DEFAULT_FILE_PERMS: UInt16 = 420;
 
@@ -14,73 +19,199 @@ forge XdvFsUtilsFile {
     const O_CREAT: UInt32 = 64;
     const O_APPEND: UInt32 = 1024;
 
+    const FILE_HANDLE_INVALID: UInt64 = 0;
+    const FILE_OK: UInt32 = 0;
+
     proc K::file_touch(path: Str) {
         emit "xdvfs-utils: file touch";
-        k_create(ROOT_INODE, path, DEFAULT_FILE_PERMS);
-        return 0;
+        let inode = k_create(ROOT_INODE, path, DEFAULT_FILE_PERMS);
+        if inode == FILE_HANDLE_INVALID {
+            return STATUS_FILE_FAILED;
+        } else {
+            return STATUS_OK;
+        }
     }
 
     proc K::file_read_text(path: Str, char_count: UInt32) {
         emit "xdvfs-utils: file read text";
-        k_open(path, O_RDONLY);
-        k_read(2, char_count);
-        k_close(2);
-        return FILE_MODE_TEXT;
+
+        let fd = k_open(path, O_RDONLY);
+        if fd == FILE_HANDLE_INVALID {
+            return STATUS_FILE_NOT_FOUND;
+        } else {
+            let read_count = k_read(fd, char_count);
+            let close_status = k_close(fd);
+            if close_status == FILE_OK {
+                if char_count == 0 {
+                    return FILE_MODE_TEXT;
+                } else {
+                    if read_count == char_count {
+                        return FILE_MODE_TEXT;
+                    } else {
+                        return STATUS_FILE_IO_ERROR;
+                    }
+                }
+            } else {
+                return STATUS_FILE_IO_ERROR;
+            }
+        }
     }
 
     proc K::file_write_text(path: Str, char_count: UInt32) {
         emit "xdvfs-utils: file write text";
-        k_open(path, O_WRONLY + O_CREAT);
-        k_write(2, char_count);
-        k_close(2);
-        return FILE_MODE_TEXT;
+
+        let fd = k_open(path, O_WRONLY + O_CREAT);
+        if fd == FILE_HANDLE_INVALID {
+            return STATUS_FILE_FAILED;
+        } else {
+            let write_count = k_write(fd, char_count);
+            let close_status = k_close(fd);
+            if close_status == FILE_OK {
+                if char_count == 0 {
+                    return FILE_MODE_TEXT;
+                } else {
+                    if write_count == char_count {
+                        return FILE_MODE_TEXT;
+                    } else {
+                        return STATUS_FILE_IO_ERROR;
+                    }
+                }
+            } else {
+                return STATUS_FILE_IO_ERROR;
+            }
+        }
     }
 
     proc K::file_append_text(path: Str, char_count: UInt32) {
         emit "xdvfs-utils: file append text";
-        k_open(path, O_WRONLY + O_APPEND + O_CREAT);
-        k_write(2, char_count);
-        k_close(2);
-        return FILE_MODE_TEXT;
+
+        let fd = k_open(path, O_WRONLY + O_APPEND + O_CREAT);
+        if fd == FILE_HANDLE_INVALID {
+            return STATUS_FILE_FAILED;
+        } else {
+            let write_count = k_write(fd, char_count);
+            let close_status = k_close(fd);
+            if close_status == FILE_OK {
+                if char_count == 0 {
+                    return FILE_MODE_TEXT;
+                } else {
+                    if write_count == char_count {
+                        return FILE_MODE_TEXT;
+                    } else {
+                        return STATUS_FILE_IO_ERROR;
+                    }
+                }
+            } else {
+                return STATUS_FILE_IO_ERROR;
+            }
+        }
     }
 
     proc K::file_read_binary(path: Str, byte_count: UInt32) {
         emit "xdvfs-utils: file read binary";
-        k_open(path, O_RDONLY);
-        k_read(2, byte_count);
-        k_close(2);
-        return FILE_MODE_BINARY;
+
+        let fd = k_open(path, O_RDONLY);
+        if fd == FILE_HANDLE_INVALID {
+            return STATUS_FILE_NOT_FOUND;
+        } else {
+            let read_count = k_read(fd, byte_count);
+            let close_status = k_close(fd);
+            if close_status == FILE_OK {
+                if byte_count == 0 {
+                    return FILE_MODE_BINARY;
+                } else {
+                    if read_count == byte_count {
+                        return FILE_MODE_BINARY;
+                    } else {
+                        return STATUS_FILE_IO_ERROR;
+                    }
+                }
+            } else {
+                return STATUS_FILE_IO_ERROR;
+            }
+        }
     }
 
     proc K::file_write_binary(path: Str, byte_count: UInt32) {
         emit "xdvfs-utils: file write binary";
-        k_open(path, O_WRONLY + O_CREAT);
-        k_write(2, byte_count);
-        k_close(2);
-        return FILE_MODE_BINARY;
+
+        let fd = k_open(path, O_WRONLY + O_CREAT);
+        if fd == FILE_HANDLE_INVALID {
+            return STATUS_FILE_FAILED;
+        } else {
+            let write_count = k_write(fd, byte_count);
+            let close_status = k_close(fd);
+            if close_status == FILE_OK {
+                if byte_count == 0 {
+                    return FILE_MODE_BINARY;
+                } else {
+                    if write_count == byte_count {
+                        return FILE_MODE_BINARY;
+                    } else {
+                        return STATUS_FILE_IO_ERROR;
+                    }
+                }
+            } else {
+                return STATUS_FILE_IO_ERROR;
+            }
+        }
     }
 
     proc K::file_cp(src: Str, dst: Str, byte_count: UInt32) {
         emit "xdvfs-utils: file copy";
-        k_open(src, O_RDONLY);
-        k_read(2, byte_count);
-        k_open(dst, O_WRONLY + O_CREAT);
-        k_write(3, byte_count);
-        k_close(2);
-        k_close(3);
-        return 0;
+
+        let src_fd = k_open(src, O_RDONLY);
+        if src_fd == FILE_HANDLE_INVALID {
+            return STATUS_FILE_NOT_FOUND;
+        } else {
+            let read_count = k_read(src_fd, byte_count);
+            let dst_fd = k_open(dst, O_WRONLY + O_CREAT);
+            if dst_fd == FILE_HANDLE_INVALID {
+                k_close(src_fd);
+                return STATUS_FILE_FAILED;
+            } else {
+                let write_count = k_write(dst_fd, read_count);
+                let close_src = k_close(src_fd);
+                let close_dst = k_close(dst_fd);
+                if close_src == FILE_OK {
+                    if close_dst == FILE_OK {
+                        if write_count == read_count {
+                            return STATUS_OK;
+                        } else {
+                            return STATUS_FILE_IO_ERROR;
+                        }
+                    } else {
+                        return STATUS_FILE_IO_ERROR;
+                    }
+                } else {
+                    return STATUS_FILE_IO_ERROR;
+                }
+            }
+        }
     }
 
     proc K::file_mv(src: Str, dst: Str, byte_count: UInt32) {
         emit "xdvfs-utils: file move";
-        file_cp(src, dst, byte_count);
-        k_delete(ROOT_INODE, src);
-        return 0;
+        let copy_status = file_cp(src, dst, byte_count);
+        if copy_status == STATUS_OK {
+            let del_status = k_delete(ROOT_INODE, src);
+            if del_status == FILE_OK {
+                return STATUS_OK;
+            } else {
+                return STATUS_FILE_FAILED;
+            }
+        } else {
+            return copy_status;
+        }
     }
 
     proc K::file_rm(path: Str) {
         emit "xdvfs-utils: file rm";
-        k_delete(ROOT_INODE, path);
-        return 0;
+        let del_status = k_delete(ROOT_INODE, path);
+        if del_status == FILE_OK {
+            return STATUS_OK;
+        } else {
+            return STATUS_FILE_FAILED;
+        }
     }
 }

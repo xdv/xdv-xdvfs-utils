@@ -3,34 +3,90 @@
 
 forge XdvFsUtilsMkfs {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_MKFS_FAILED: UInt32 = 1;
+    const STATUS_INVALID_DEVICE: UInt32 = 2;
+    const STATUS_UNSUPPORTED_TARGET: UInt32 = 3;
+
     const FS_KIND_XDVFS: UInt32 = 1;
     const FS_KIND_FAT32: UInt32 = 2;
     const FS_KIND_EXT2: UInt32 = 3;
 
     const DEFAULT_BLOCK_SIZE: UInt32 = 4096;
     const DEFAULT_INODE_SIZE: UInt32 = 256;
+    const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
+    const DEFAULT_PARTITION_SECTORS: UInt64 = 65536;
+
+    const PARTITION_TYPE_XDVFS: UInt32 = 227;
+    const PARTITION_TYPE_LINUX: UInt32 = 131;
+    const PARTITION_TYPE_FAT32_LBA: UInt32 = 12;
 
     proc K::mkfs_xdvfs(device: Str) {
         emit "xdvfs-utils: mkfs.xdvfs start";
-        probe_standard_storage();
-        prepare_format_context(0, DEFAULT_BLOCK_SIZE, DEFAULT_INODE_SIZE);
-        format_xdvfs(0, DEFAULT_BLOCK_SIZE, DEFAULT_INODE_SIZE);
-        finalize_format(0);
-        emit "xdvfs-utils: mkfs.xdvfs complete";
-        return 0;
+
+        let probe = probe_standard_storage();
+        if probe == 0 {
+            return STATUS_INVALID_DEVICE;
+        } else {
+            let prep = prepare_format_context(DEFAULT_DEVICE_HANDLE, DEFAULT_BLOCK_SIZE, DEFAULT_INODE_SIZE);
+            if prep == STATUS_OK {
+                let format_status = format_xdvfs(DEFAULT_DEVICE_HANDLE, DEFAULT_BLOCK_SIZE, DEFAULT_INODE_SIZE);
+                if format_status == STATUS_OK {
+                    let final_status = finalize_format(DEFAULT_DEVICE_HANDLE);
+                    if final_status == STATUS_OK {
+                        emit "xdvfs-utils: mkfs.xdvfs complete";
+                        return STATUS_OK;
+                    } else {
+                        return STATUS_MKFS_FAILED;
+                    }
+                } else {
+                    return STATUS_MKFS_FAILED;
+                }
+            } else {
+                return STATUS_MKFS_FAILED;
+            }
+        }
     }
 
     proc K::mkfs_fat32(device: Str) {
         emit "xdvfs-utils: mkfs.fat32 compatibility path";
-        probe_standard_storage();
-        detect_partition_table(0);
-        return 0;
+
+        let probe = probe_standard_storage();
+        if probe == 0 {
+            return STATUS_INVALID_DEVICE;
+        } else {
+            let style = detect_partition_table(DEFAULT_DEVICE_HANDLE);
+            if style == 0 {
+                create_mbr_partition_table(DEFAULT_DEVICE_HANDLE);
+            }
+            let start_lba = layout_mbr_64m();
+            let part = create_partition(DEFAULT_DEVICE_HANDLE, start_lba, DEFAULT_PARTITION_SECTORS, PARTITION_TYPE_FAT32_LBA);
+            if part == 0 {
+                return STATUS_MKFS_FAILED;
+            } else {
+                return STATUS_OK;
+            }
+        }
     }
 
     proc K::mkfs_ext2(device: Str) {
         emit "xdvfs-utils: mkfs.ext2 compatibility path";
-        probe_standard_storage();
-        detect_partition_table(0);
-        return 0;
+
+        let probe = probe_standard_storage();
+        if probe == 0 {
+            return STATUS_INVALID_DEVICE;
+        } else {
+            let style = detect_partition_table(DEFAULT_DEVICE_HANDLE);
+            if style == 0 {
+                create_gpt_partition_table(DEFAULT_DEVICE_HANDLE);
+            }
+            let start_lba = layout_mbr_64m();
+            let part = create_partition(DEFAULT_DEVICE_HANDLE, start_lba, DEFAULT_PARTITION_SECTORS, PARTITION_TYPE_LINUX);
+            if part == 0 {
+                return STATUS_MKFS_FAILED;
+            } else {
+                return STATUS_OK;
+            }
+        }
     }
 }

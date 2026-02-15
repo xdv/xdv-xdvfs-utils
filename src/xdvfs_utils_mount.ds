@@ -3,44 +3,78 @@
 
 forge XdvFsUtilsMount {
 
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_MOUNT_FAILED: UInt32 = 1;
+    const STATUS_SYNC_FAILED: UInt32 = 2;
+
     const MOUNT_FLAGS_DEFAULT: UInt32 = 0;
     const MOUNT_FLAGS_RDONLY: UInt32 = 1;
     const MOUNT_FLAGS_SYNC: UInt32 = 16;
 
+    const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
+
     proc K::mount_xdvfs(device: Str, mount_point: Str) {
         emit "xdvfs-utils: mount start";
-        mount(device, mount_point, "xdvfs", MOUNT_FLAGS_DEFAULT);
-        return 0;
+        let status = mount(device, mount_point, "xdvfs", MOUNT_FLAGS_DEFAULT);
+        if status == STATUS_OK {
+            return STATUS_OK;
+        } else {
+            return STATUS_MOUNT_FAILED;
+        }
     }
 
     proc K::mount_read_only(device: Str, mount_point: Str) {
         emit "xdvfs-utils: mount read-only";
-        mount(device, mount_point, "xdvfs", MOUNT_FLAGS_RDONLY);
-        return 0;
+        let status = mount(device, mount_point, "xdvfs", MOUNT_FLAGS_RDONLY);
+        if status == STATUS_OK {
+            return STATUS_OK;
+        } else {
+            return STATUS_MOUNT_FAILED;
+        }
     }
 
     proc K::mount_remount(mount_point: Str, flags: UInt32) {
         emit "xdvfs-utils: remount";
-        remount(mount_point, flags);
-        return 0;
+        let status = remount(mount_point, flags);
+        if status == STATUS_OK {
+            return STATUS_OK;
+        } else {
+            return STATUS_MOUNT_FAILED;
+        }
     }
 
     proc K::mount_sync(mount_point: Str) {
         emit "xdvfs-utils: sync";
-        sync_filesystem(0);
-        remount(mount_point, MOUNT_FLAGS_SYNC);
-        return 0;
+        let sync_status = sync_filesystem(DEFAULT_DEVICE_HANDLE);
+        if sync_status == STATUS_OK {
+            let remount_status = remount(mount_point, MOUNT_FLAGS_SYNC);
+            if remount_status == STATUS_OK {
+                return STATUS_OK;
+            } else {
+                return STATUS_MOUNT_FAILED;
+            }
+        } else {
+            return STATUS_SYNC_FAILED;
+        }
     }
 
     proc K::mount_umount(mount_point: Str) {
         emit "xdvfs-utils: umount";
-        unmount(mount_point);
-        return 0;
+        let status = unmount(mount_point);
+        if status == STATUS_OK {
+            return STATUS_OK;
+        } else {
+            return STATUS_MOUNT_FAILED;
+        }
     }
 
     proc K::mount_check(device: Str) {
         emit "xdvfs-utils: mount check";
-        check_filesystem(device);
-        return 0;
+        let status = check_filesystem(device);
+        if status == STATUS_OK {
+            return STATUS_OK;
+        } else {
+            return STATUS_MOUNT_FAILED;
+        }
     }
 }

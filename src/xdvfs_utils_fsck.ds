@@ -1,0 +1,28 @@
+// xdv-xdvfs-utils: fsck workflows
+// DPL implementation of filesystem consistency checks.
+
+forge XdvFsUtilsFsck {
+
+    const REPAIR_MODE_NONE: UInt32 = 0;
+    const REPAIR_MODE_SAFE: UInt32 = 1;
+    const REPAIR_MODE_AGGRESSIVE: UInt32 = 2;
+
+    proc K::fsck_xdvfs(device: Str, repair_mode: UInt32) {
+        emit "xdvfs-utils: fsck.xdvfs start";
+        probe_standard_storage();
+        detect_partition_table(0);
+        validate_superblock(0);
+        emit "xdvfs-utils: fsck.xdvfs complete";
+        return 0;
+    }
+
+    proc K::fsck_auto_repair(device: Str) {
+        fsck_xdvfs(device, REPAIR_MODE_SAFE);
+        return 0;
+    }
+
+    proc K::fsck_read_only(device: Str) {
+        fsck_xdvfs(device, REPAIR_MODE_NONE);
+        return 0;
+    }
+}

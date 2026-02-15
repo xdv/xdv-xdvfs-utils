@@ -1,0 +1,50 @@
+// xdv-xdvfs-utils: directory workflows
+// DPL implementation of mkdir/rmdir/ls/tree style directory operations.
+
+forge XdvFsUtilsDir {
+
+    const ROOT_INODE: UInt64 = 2;
+    const DEFAULT_DIR_PERMS: UInt16 = 493;
+    const LIST_RECURSIVE: UInt32 = 1;
+    const DEFAULT_TREE_DEPTH: UInt32 = 8;
+
+    proc K::dir_mkdir(name: Str) {
+        emit "xdvfs-utils: dir mkdir";
+        mkdir(ROOT_INODE, name, DEFAULT_DIR_PERMS);
+        return 0;
+    }
+
+    proc K::dir_mkdir_mode(name: Str, perms: UInt16) {
+        emit "xdvfs-utils: dir mkdir mode";
+        mkdir(ROOT_INODE, name, perms);
+        return 0;
+    }
+
+    proc K::dir_ls(path: Str, flags: UInt32) {
+        emit "xdvfs-utils: dir ls";
+        opendir(ROOT_INODE);
+        readdir(ROOT_INODE);
+        closedir(ROOT_INODE);
+        return 0;
+    }
+
+    proc K::dir_tree(path: Str) {
+        emit "xdvfs-utils: dir tree";
+        dir_ls(path, LIST_RECURSIVE);
+        return DEFAULT_TREE_DEPTH;
+    }
+
+    proc K::dir_rm(name: Str) {
+        emit "xdvfs-utils: dir rmdir";
+        rmdir(ROOT_INODE, name);
+        return 0;
+    }
+
+    proc K::dir_mv(old_name: Str, new_name: Str) {
+        emit "xdvfs-utils: dir rename";
+        lookup(ROOT_INODE, old_name);
+        remove_dir_entry(ROOT_INODE, old_name);
+        add_dir_entry(ROOT_INODE, new_name, ROOT_INODE + 1);
+        return 0;
+    }
+}

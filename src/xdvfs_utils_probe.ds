@@ -1,0 +1,29 @@
+// xdv-xdvfs-utils: probe workflows
+// DPL implementation of blkid/lsblk style discovery.
+
+forge XdvFsUtilsProbe {
+
+    const FS_KIND_UNKNOWN: UInt32 = 0;
+    const FS_KIND_XDVFS: UInt32 = 1;
+
+    proc K::blkid(device: Str) {
+        emit "xdvfs-utils: blkid probe";
+        probe_standard_storage();
+        detect_partition_table(0);
+        validate_superblock(0);
+        return FS_KIND_XDVFS;
+    }
+
+    proc K::lsblk() {
+        emit "xdvfs-utils: lsblk enumerate";
+        probe_standard_storage();
+        enumerate_block_devices();
+        enumerate_partitions(0);
+        return 0;
+    }
+
+    proc K::probe_all() {
+        lsblk();
+        return 0;
+    }
+}

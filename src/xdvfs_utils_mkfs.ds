@@ -1,0 +1,36 @@
+// xdv-xdvfs-utils: formatting workflows
+// DPL implementation of mkfs-style commands.
+
+forge XdvFsUtilsMkfs {
+
+    const FS_KIND_XDVFS: UInt32 = 1;
+    const FS_KIND_FAT32: UInt32 = 2;
+    const FS_KIND_EXT2: UInt32 = 3;
+
+    const DEFAULT_BLOCK_SIZE: UInt32 = 4096;
+    const DEFAULT_INODE_SIZE: UInt32 = 256;
+
+    proc K::mkfs_xdvfs(device: Str) {
+        emit "xdvfs-utils: mkfs.xdvfs start";
+        probe_standard_storage();
+        prepare_format_context(0, DEFAULT_BLOCK_SIZE, DEFAULT_INODE_SIZE);
+        format_xdvfs(0, DEFAULT_BLOCK_SIZE, DEFAULT_INODE_SIZE);
+        finalize_format(0);
+        emit "xdvfs-utils: mkfs.xdvfs complete";
+        return 0;
+    }
+
+    proc K::mkfs_fat32(device: Str) {
+        emit "xdvfs-utils: mkfs.fat32 compatibility path";
+        probe_standard_storage();
+        detect_partition_table(0);
+        return 0;
+    }
+
+    proc K::mkfs_ext2(device: Str) {
+        emit "xdvfs-utils: mkfs.ext2 compatibility path";
+        probe_standard_storage();
+        detect_partition_table(0);
+        return 0;
+    }
+}

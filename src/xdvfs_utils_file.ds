@@ -1,0 +1,86 @@
+// xdv-xdvfs-utils: file workflows
+// DPL implementation of text/binary file operations.
+
+forge XdvFsUtilsFile {
+
+    const ROOT_INODE: UInt64 = 2;
+    const DEFAULT_FILE_PERMS: UInt16 = 420;
+
+    const FILE_MODE_TEXT: UInt32 = 1;
+    const FILE_MODE_BINARY: UInt32 = 2;
+
+    const O_RDONLY: UInt32 = 0;
+    const O_WRONLY: UInt32 = 1;
+    const O_CREAT: UInt32 = 64;
+    const O_APPEND: UInt32 = 1024;
+
+    proc K::file_touch(path: Str) {
+        emit "xdvfs-utils: file touch";
+        k_create(ROOT_INODE, path, DEFAULT_FILE_PERMS);
+        return 0;
+    }
+
+    proc K::file_read_text(path: Str, char_count: UInt32) {
+        emit "xdvfs-utils: file read text";
+        k_open(path, O_RDONLY);
+        k_read(2, char_count);
+        k_close(2);
+        return FILE_MODE_TEXT;
+    }
+
+    proc K::file_write_text(path: Str, char_count: UInt32) {
+        emit "xdvfs-utils: file write text";
+        k_open(path, O_WRONLY + O_CREAT);
+        k_write(2, char_count);
+        k_close(2);
+        return FILE_MODE_TEXT;
+    }
+
+    proc K::file_append_text(path: Str, char_count: UInt32) {
+        emit "xdvfs-utils: file append text";
+        k_open(path, O_WRONLY + O_APPEND + O_CREAT);
+        k_write(2, char_count);
+        k_close(2);
+        return FILE_MODE_TEXT;
+    }
+
+    proc K::file_read_binary(path: Str, byte_count: UInt32) {
+        emit "xdvfs-utils: file read binary";
+        k_open(path, O_RDONLY);
+        k_read(2, byte_count);
+        k_close(2);
+        return FILE_MODE_BINARY;
+    }
+
+    proc K::file_write_binary(path: Str, byte_count: UInt32) {
+        emit "xdvfs-utils: file write binary";
+        k_open(path, O_WRONLY + O_CREAT);
+        k_write(2, byte_count);
+        k_close(2);
+        return FILE_MODE_BINARY;
+    }
+
+    proc K::file_cp(src: Str, dst: Str, byte_count: UInt32) {
+        emit "xdvfs-utils: file copy";
+        k_open(src, O_RDONLY);
+        k_read(2, byte_count);
+        k_open(dst, O_WRONLY + O_CREAT);
+        k_write(3, byte_count);
+        k_close(2);
+        k_close(3);
+        return 0;
+    }
+
+    proc K::file_mv(src: Str, dst: Str, byte_count: UInt32) {
+        emit "xdvfs-utils: file move";
+        file_cp(src, dst, byte_count);
+        k_delete(ROOT_INODE, src);
+        return 0;
+    }
+
+    proc K::file_rm(path: Str) {
+        emit "xdvfs-utils: file rm";
+        k_delete(ROOT_INODE, path);
+        return 0;
+    }
+}

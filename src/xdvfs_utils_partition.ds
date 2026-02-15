@@ -1,0 +1,44 @@
+// xdv-xdvfs-utils: partitioning workflows
+// DPL implementation of fdisk/parted style operations.
+
+forge XdvFsUtilsPartition {
+
+    const LABEL_MBR: UInt32 = 1;
+    const LABEL_GPT: UInt32 = 2;
+
+    const PARTITION_TYPE_XDVFS: UInt32 = 227;
+    const PARTITION_TYPE_LINUX: UInt32 = 131;
+    const PARTITION_TYPE_FAT32_LBA: UInt32 = 12;
+
+    proc K::fdisk_print(device: Str) {
+        emit "xdvfs-utils: fdisk print";
+        probe_standard_storage();
+        detect_partition_table(0);
+        enumerate_partitions(0);
+        return 0;
+    }
+
+    proc K::fdisk_create_mbr(device: Str) {
+        emit "xdvfs-utils: create MBR";
+        create_mbr_partition_table(0);
+        return 0;
+    }
+
+    proc K::fdisk_create_gpt(device: Str) {
+        emit "xdvfs-utils: create GPT";
+        create_gpt_partition_table(0);
+        return 0;
+    }
+
+    proc K::fdisk_add_partition(device: Str, start_lba: UInt64, sector_count: UInt64, partition_type: UInt32) {
+        emit "xdvfs-utils: add partition";
+        create_partition(0, start_lba, sector_count, partition_type);
+        return 0;
+    }
+
+    proc K::fdisk_set_bootable(device: Str, partition_index: UInt32) {
+        emit "xdvfs-utils: set bootable partition";
+        set_partition_bootable(0, partition_index);
+        return 0;
+    }
+}

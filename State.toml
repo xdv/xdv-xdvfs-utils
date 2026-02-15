@@ -1,0 +1,15 @@
+# XDV XDVFS Utilities Workspace Manifest
+
+[workspace]
+name = "xdv_xdvfs_utils"
+version = "0.2.0"
+description = "Partitioning, formatting, fsck, probe, directory, file, mount, stats, and permission utilities for XDVFS"
+
+[sector]
+name = "xdv_xdvfs_utils"
+path = "src"
+
+[dependencies]
+xdv_xdvfs = { path = "../xdv-xdvfs" }
+dustlib = { path = "../dustlib" }
+dustlib_k = { path = "../dustlib_k" }

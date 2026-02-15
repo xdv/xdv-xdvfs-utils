@@ -1,0 +1,41 @@
+// xdv-xdvfs-utils: permissions/ownership workflows
+// DPL implementation of chmod/chown/chgrp style metadata operations.
+
+forge XdvFsUtilsPerm {
+
+    const ROOT_INODE: UInt64 = 2;
+    const DEFAULT_UMASK: UInt16 = 18;
+
+    proc K::perm_chmod(path: Str, mode: UInt16) {
+        emit "xdvfs-utils: chmod";
+        lookup(ROOT_INODE, path);
+        get_inode(ROOT_INODE);
+        write_inode(ROOT_INODE);
+        return 0;
+    }
+
+    proc K::perm_chown(path: Str, user_id: UInt32) {
+        emit "xdvfs-utils: chown";
+        lookup(ROOT_INODE, path);
+        get_inode(ROOT_INODE);
+        write_inode(ROOT_INODE);
+        return 0;
+    }
+
+    proc K::perm_chgrp(path: Str, group_id: UInt32) {
+        emit "xdvfs-utils: chgrp";
+        lookup(ROOT_INODE, path);
+        get_inode(ROOT_INODE);
+        write_inode(ROOT_INODE);
+        return 0;
+    }
+
+    proc K::perm_set_umask(mask: UInt16) {
+        emit "xdvfs-utils: umask";
+        return mask;
+    }
+
+    proc K::perm_default_umask() {
+        return DEFAULT_UMASK;
+    }
+}

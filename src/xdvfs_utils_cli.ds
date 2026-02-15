@@ -1,0 +1,82 @@
+// xdv-xdvfs-utils: command orchestration entrypoints
+
+forge XdvFsUtilsCli {
+
+    const TOOL_PROBE: UInt32 = 1;
+    const TOOL_PARTITION: UInt32 = 2;
+    const TOOL_MKFS: UInt32 = 3;
+    const TOOL_FSCK: UInt32 = 4;
+    const TOOL_DIR: UInt32 = 5;
+    const TOOL_FILE: UInt32 = 6;
+    const TOOL_MOUNT: UInt32 = 7;
+    const TOOL_SPACE: UInt32 = 8;
+    const TOOL_PERM: UInt32 = 9;
+
+    proc K::run_probe(device: Str) {
+        emit "xdvfs-utils: run probe tool";
+        blkid(device);
+        return 0;
+    }
+
+    proc K::run_partition(device: Str) {
+        emit "xdvfs-utils: run partition tool";
+        fdisk_print(device);
+        return 0;
+    }
+
+    proc K::run_mkfs(device: Str) {
+        emit "xdvfs-utils: run mkfs tool";
+        mkfs_xdvfs(device);
+        return 0;
+    }
+
+    proc K::run_fsck(device: Str) {
+        emit "xdvfs-utils: run fsck tool";
+        fsck_xdvfs(device, 1);
+        return 0;
+    }
+
+    proc K::run_dir(path: Str) {
+        emit "xdvfs-utils: run dir tool";
+        dir_ls(path, 0);
+        return 0;
+    }
+
+    proc K::run_file(path: Str) {
+        emit "xdvfs-utils: run file tool";
+        file_touch(path);
+        return 0;
+    }
+
+    proc K::run_mount(device: Str) {
+        emit "xdvfs-utils: run mount tool";
+        mount_xdvfs(device, "/");
+        return 0;
+    }
+
+    proc K::run_space(target: Str) {
+        emit "xdvfs-utils: run space tool";
+        space_df(target, "/");
+        return 0;
+    }
+
+    proc K::run_perm(path: Str) {
+        emit "xdvfs-utils: run perm tool";
+        perm_chmod(path, 420);
+        return 0;
+    }
+
+    proc K::run(tool: UInt32, device: Str) {
+        emit "xdvfs-utils: dispatch";
+        run_probe(device);
+        run_partition(device);
+        run_mkfs(device);
+        run_fsck(device);
+        run_dir(device);
+        run_file(device);
+        run_mount(device);
+        run_space(device);
+        run_perm(device);
+        return 0;
+    }
+}

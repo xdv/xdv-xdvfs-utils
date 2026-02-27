@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: permissions/ownership workflows
-// DPL implementation of chmod/chown/chgrp style metadata operations.
+// File: xdvfs_utils_perm.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: permissions/ownership workflows
+//   DPL implementation of chmod/chown/chgrp style metadata operations.
 
 forge XdvFsUtilsPerm {
 

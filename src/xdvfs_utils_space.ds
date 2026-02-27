@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: capacity/statistics workflows
-// DPL implementation of df/du/stat/iostat style operations.
+// File: xdvfs_utils_space.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: capacity/statistics workflows
+//   DPL implementation of df/du/stat/iostat style operations.
 
 forge XdvFsUtilsSpace {
 

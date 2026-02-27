@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: mount workflows
-// DPL implementation of mount/umount/remount/sync operations.
+// File: xdvfs_utils_mount.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: mount workflows
+//   DPL implementation of mount/umount/remount/sync operations.
 
 forge XdvFsUtilsMount {
 

@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: partitioning workflows
-// DPL implementation of fdisk/parted style operations.
+// File: xdvfs_utils_partition.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: partitioning workflows
+//   DPL implementation of fdisk/parted style operations.
 
 forge XdvFsUtilsPartition {
 

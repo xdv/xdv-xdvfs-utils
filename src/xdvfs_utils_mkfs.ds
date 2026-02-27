@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: formatting workflows
-// DPL implementation of mkfs-style commands.
+// File: xdvfs_utils_mkfs.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: formatting workflows
+//   DPL implementation of mkfs-style commands.
 
 forge XdvFsUtilsMkfs {
 

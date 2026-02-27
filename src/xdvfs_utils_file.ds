@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: file workflows
-// DPL implementation of text/binary file operations.
+// File: xdvfs_utils_file.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: file workflows
+//   DPL implementation of text/binary file operations.
 
 forge XdvFsUtilsFile {
 

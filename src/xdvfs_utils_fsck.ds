@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: fsck workflows
-// DPL implementation of filesystem consistency checks.
+// File: xdvfs_utils_fsck.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: fsck workflows
+//   DPL implementation of filesystem consistency checks.
 
 forge XdvFsUtilsFsck {
 

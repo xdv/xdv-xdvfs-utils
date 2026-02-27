@@ -1,4 +1,7 @@
-// xdv-xdvfs-utils: command orchestration entrypoints
+// File: xdvfs_utils_cli.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: command orchestration entrypoints
 
 forge XdvFsUtilsCli {
 

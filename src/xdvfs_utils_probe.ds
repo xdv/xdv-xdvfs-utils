@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: probe workflows
-// DPL implementation of blkid/lsblk style discovery.
+// File: xdvfs_utils_probe.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: probe workflows
+//   DPL implementation of blkid/lsblk style discovery.
 
 forge XdvFsUtilsProbe {
 

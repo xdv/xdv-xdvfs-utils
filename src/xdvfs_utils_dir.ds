@@ -1,5 +1,8 @@
-// xdv-xdvfs-utils: directory workflows
-// DPL implementation of mkdir/rmdir/ls/tree style directory operations.
+// File: xdvfs_utils_dir.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils: directory workflows
+//   DPL implementation of mkdir/rmdir/ls/tree style directory operations.
 
 forge XdvFsUtilsDir {
 

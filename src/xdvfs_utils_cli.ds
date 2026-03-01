@@ -7,6 +7,9 @@ forge XdvFsUtilsCli {
 
     const STATUS_OK: UInt32 = 0;
     const STATUS_INVALID_TOOL: UInt32 = 1;
+    const STATUS_TOOL_FAILED: UInt32 = 2;
+
+    const FS_KIND_UNKNOWN: UInt32 = 0;
 
     const TOOL_PROBE: UInt32 = 1;
     const TOOL_PARTITION: UInt32 = 2;
@@ -18,84 +21,101 @@ forge XdvFsUtilsCli {
     const TOOL_SPACE: UInt32 = 8;
     const TOOL_PERM: UInt32 = 9;
 
+    const LABEL_MBR: UInt32 = 1;
+
     proc K::run_probe(device: Str) {
-        emit "xdvfs-utils: run probe tool";
+        emit "xdvfs-utils.cli: run probe";
         let kind = blkid(device);
-        if kind == 0 {
-            return STATUS_INVALID_TOOL;
+        if kind == FS_KIND_UNKNOWN {
+            return STATUS_TOOL_FAILED;
         } else {
-            return lsblk();
+            let list_status = lsblk();
+            if list_status == STATUS_OK {
+                return probe_all();
+            } else {
+                return list_status;
+            }
         }
     }
 
     proc K::run_partition(device: Str) {
-        emit "xdvfs-utils: run partition tool";
-        return fdisk_print(device);
+        emit "xdvfs-utils.cli: run partition";
+        let print_status = fdisk_print(device);
+        if print_status == STATUS_OK {
+            return STATUS_OK;
+        } else {
+            let prepare = fdisk_prepare_xdvfs_64m(device, LABEL_MBR);
+            if prepare == STATUS_OK {
+                return fdisk_print(device);
+            } else {
+                return prepare;
+            }
+        }
     }
 
     proc K::run_mkfs(device: Str) {
-        emit "xdvfs-utils: run mkfs tool";
+        emit "xdvfs-utils.cli: run mkfs";
         return mkfs_xdvfs(device);
     }
 
     proc K::run_fsck(device: Str) {
-        emit "xdvfs-utils: run fsck tool";
-        return fsck_xdvfs(device, 1);
+        emit "xdvfs-utils.cli: run fsck";
+        return fsck_auto_repair(device);
     }
 
     proc K::run_dir(path: Str) {
-        emit "xdvfs-utils: run dir tool";
+        emit "xdvfs-utils.cli: run dir";
         return dir_ls(path, 0);
     }
 
     proc K::run_file(path: Str) {
-        emit "xdvfs-utils: run file tool";
+        emit "xdvfs-utils.cli: run file";
         return file_touch(path);
     }
 
     proc K::run_mount(device: Str) {
-        emit "xdvfs-utils: run mount tool";
+        emit "xdvfs-utils.cli: run mount";
         return mount_xdvfs(device, "/");
     }
 
     proc K::run_space(target: Str) {
-        emit "xdvfs-utils: run space tool";
+        emit "xdvfs-utils.cli: run space";
         return space_df(target, "/");
     }
 
     proc K::run_perm(path: Str) {
-        emit "xdvfs-utils: run perm tool";
+        emit "xdvfs-utils.cli: run perm";
         return perm_chmod(path, 420);
     }
 
-    proc K::run(tool: UInt32, device: Str) {
-        emit "xdvfs-utils: dispatch";
+    proc K::run(tool: UInt32, target: Str) {
+        emit "xdvfs-utils.cli: dispatch";
         if tool == TOOL_PROBE {
-            return run_probe(device);
+            return run_probe(target);
         } else {
             if tool == TOOL_PARTITION {
-                return run_partition(device);
+                return run_partition(target);
             } else {
                 if tool == TOOL_MKFS {
-                    return run_mkfs(device);
+                    return run_mkfs(target);
                 } else {
                     if tool == TOOL_FSCK {
-                        return run_fsck(device);
+                        return run_fsck(target);
                     } else {
                         if tool == TOOL_DIR {
-                            return run_dir(device);
+                            return run_dir(target);
                         } else {
                             if tool == TOOL_FILE {
-                                return run_file(device);
+                                return run_file(target);
                             } else {
                                 if tool == TOOL_MOUNT {
-                                    return run_mount(device);
+                                    return run_mount(target);
                                 } else {
                                     if tool == TOOL_SPACE {
-                                        return run_space(device);
+                                        return run_space(target);
                                     } else {
                                         if tool == TOOL_PERM {
-                                            return run_perm(device);
+                                            return run_perm(target);
                                         } else {
                                             return STATUS_INVALID_TOOL;
                                         }

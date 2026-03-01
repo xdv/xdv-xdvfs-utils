@@ -1,0 +1,119 @@
+// File: xdvfs_utils_e2e_tests.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-xdvfs-utils end-to-end workflow tests for disk image utility paths.
+
+forge XdvFsUtilsE2ETests {
+
+    const TEST_PASS: UInt32 = 0;
+    const TEST_FAIL: UInt32 = 1;
+
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_REPAIR_REQUIRED: UInt32 = 2;
+
+    const FS_KIND_XDVFS: UInt32 = 1;
+
+    const TOOL_PROBE: UInt32 = 1;
+    const TOOL_PARTITION: UInt32 = 2;
+    const TOOL_MKFS: UInt32 = 3;
+    const TOOL_FSCK: UInt32 = 4;
+    const TOOL_MOUNT: UInt32 = 7;
+    const TOOL_SPACE: UInt32 = 8;
+
+    proc K::expect_u32(actual: UInt32, expected: UInt32) {
+        if actual == expected {
+            return TEST_PASS;
+        } else {
+            return TEST_FAIL;
+        }
+    }
+
+    proc K::combine(lhs: UInt32, rhs: UInt32) {
+        if lhs == TEST_PASS {
+            return rhs;
+        } else {
+            return TEST_FAIL;
+        }
+    }
+
+    proc K::test_partition_workflow_mbr() {
+        let created = fdisk_create_mbr("xdv0");
+        let printed = fdisk_print("xdv0");
+        let bootable = fdisk_set_bootable("xdv0", 1);
+
+        let t1 = expect_u32(created, STATUS_OK);
+        let t2 = expect_u32(printed, STATUS_OK);
+        let t3 = expect_u32(bootable, STATUS_OK);
+
+        let u1 = combine(t1, t2);
+        return combine(u1, t3);
+    }
+
+    proc K::test_partition_workflow_gpt() {
+        let created = fdisk_create_gpt("xdv0");
+        let printed = fdisk_print("xdv0");
+
+        let t1 = expect_u32(created, STATUS_OK);
+        let t2 = expect_u32(printed, STATUS_OK);
+        return combine(t1, t2);
+    }
+
+    proc K::test_mkfs_fsck_pipeline() {
+        let mkfs = mkfs_xdvfs("xdv0");
+        let fsck_ro = fsck_read_only("xdv0");
+
+        let t1 = expect_u32(mkfs, STATUS_OK);
+        if fsck_ro == STATUS_OK {
+            return t1;
+        } else {
+            if fsck_ro == STATUS_REPAIR_REQUIRED {
+                return t1;
+            } else {
+                return TEST_FAIL;
+            }
+        }
+    }
+
+    proc K::test_probe_pipeline() {
+        let kind = blkid("xdv0");
+        let list = lsblk();
+        let all = probe_all();
+
+        let t1 = expect_u32(kind, FS_KIND_XDVFS);
+        let t2 = expect_u32(list, STATUS_OK);
+        let t3 = expect_u32(all, STATUS_OK);
+
+        let u1 = combine(t1, t2);
+        return combine(u1, t3);
+    }
+
+    proc K::test_cli_disk_image_pipeline() {
+        let c1 = run(TOOL_PARTITION, "xdv0");
+        let c2 = run(TOOL_MKFS, "xdv0");
+        let c3 = run(TOOL_FSCK, "xdv0");
+        let c4 = run(TOOL_PROBE, "xdv0");
+        let c5 = run(TOOL_MOUNT, "xdv0");
+        let c6 = run(TOOL_SPACE, "xdv0");
+
+        let t1 = expect_u32(c1, STATUS_OK);
+        let t2 = expect_u32(c2, STATUS_OK);
+        let t3 = expect_u32(c3, STATUS_OK);
+        let t4 = expect_u32(c4, STATUS_OK);
+        let t5 = expect_u32(c5, STATUS_OK);
+        let t6 = expect_u32(c6, STATUS_OK);
+
+        let u1 = combine(t1, t2);
+        let u2 = combine(u1, t3);
+        let u3 = combine(u2, t4);
+        let u4 = combine(u3, t5);
+        return combine(u4, t6);
+    }
+
+    proc K::run_all_tests() {
+        let t1 = test_partition_workflow_mbr();
+        let t2 = combine(t1, test_partition_workflow_gpt());
+        let t3 = combine(t2, test_mkfs_fsck_pipeline());
+        let t4 = combine(t3, test_probe_pipeline());
+        return combine(t4, test_cli_disk_image_pipeline());
+    }
+}

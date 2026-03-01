@@ -10,6 +10,7 @@ forge XdvFsUtilsProbe {
     const STATUS_PROBE_FAILED: UInt32 = 1;
     const STATUS_PARTITION_UNKNOWN: UInt32 = 2;
     const STATUS_SUPERBLOCK_INVALID: UInt32 = 3;
+    const STATUS_LAYOUT_INVALID: UInt32 = 4;
 
     const FS_KIND_UNKNOWN: UInt32 = 0;
     const FS_KIND_XDVFS: UInt32 = 1;
@@ -20,54 +21,113 @@ forge XdvFsUtilsProbe {
     const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
     const DEFAULT_TOTAL_BLOCKS: UInt64 = 16384;
 
-    proc K::blkid(device: Str) {
-        emit "xdvfs-utils: blkid probe";
+    proc K::resolve_device_handle(device: Str) {
+        return DEFAULT_DEVICE_HANDLE;
+    }
 
-        let bus_probe = probe_standard_storage();
-        if bus_probe == 0 {
-            return FS_KIND_UNKNOWN;
+    proc K::probe_partition_state(device_handle: UInt64) {
+        let partition_style = detect_partition_table(device_handle);
+        if partition_style == PARTITION_STYLE_NONE {
+            return STATUS_PARTITION_UNKNOWN;
         } else {
-            let partition_style = detect_partition_table(DEFAULT_DEVICE_HANDLE);
-            if partition_style == PARTITION_STYLE_NONE {
-                return FS_KIND_UNKNOWN;
+            let partition_count = enumerate_partitions(device_handle);
+            if partition_count == 0 {
+                return STATUS_PARTITION_UNKNOWN;
             } else {
-                let sb = create_superblock(DEFAULT_TOTAL_BLOCKS);
-                if sb == 0 {
-                    return FS_KIND_UNKNOWN;
+                let boot_partition = get_boot_partition(device_handle);
+                if boot_partition == 0 {
+                    return STATUS_PARTITION_UNKNOWN;
                 } else {
-                    let sb_valid = validate_superblock(sb);
-                    if sb_valid == SUPERBLOCK_OK {
-                        return FS_KIND_XDVFS;
-                    } else {
-                        return FS_KIND_UNKNOWN;
-                    }
+                    return STATUS_OK;
                 }
             }
         }
     }
 
+    proc K::probe_superblock_state() {
+        let sb = create_superblock(DEFAULT_TOTAL_BLOCKS);
+        if sb == 0 {
+            return STATUS_SUPERBLOCK_INVALID;
+        } else {
+            let sb_valid = validate_superblock(sb);
+            if sb_valid == SUPERBLOCK_OK {
+                return STATUS_OK;
+            } else {
+                return STATUS_SUPERBLOCK_INVALID;
+            }
+        }
+    }
+
+    proc K::probe_layout_contract() {
+        let path_status = validate_required_paths(required_kernel_path_marker(), required_preload_path_marker());
+        if path_status == STATUS_OK {
+            let slots = validate_required_slots(kernel_slot_lba(), preload_slot_lba());
+            if slots == SUPERBLOCK_OK {
+                return STATUS_OK;
+            } else {
+                return STATUS_LAYOUT_INVALID;
+            }
+        } else {
+            return STATUS_LAYOUT_INVALID;
+        }
+    }
+
+    proc K::blkid(device: Str) {
+        emit "xdvfs-utils.probe: blkid";
+
+        let bus_probe = probe_standard_storage();
+        if bus_probe == 0 {
+            return FS_KIND_UNKNOWN;
+        } else {
+            let device_handle = resolve_device_handle(device);
+            let partition_status = probe_partition_state(device_handle);
+            if partition_status == STATUS_OK {
+                let sb_state = probe_superblock_state();
+                if sb_state == STATUS_OK {
+                    let layout_state = probe_layout_contract();
+                    if layout_state == STATUS_OK {
+                        return FS_KIND_XDVFS;
+                    } else {
+                        return FS_KIND_UNKNOWN;
+                    }
+                } else {
+                    return FS_KIND_UNKNOWN;
+                }
+            } else {
+                return FS_KIND_UNKNOWN;
+            }
+        }
+    }
+
     proc K::lsblk() {
-        emit "xdvfs-utils: lsblk enumerate";
+        emit "xdvfs-utils.probe: lsblk";
 
         let device_count = enumerate_block_devices();
         if device_count == 0 {
             return STATUS_PROBE_FAILED;
         } else {
-            let partition_count = enumerate_partitions(DEFAULT_DEVICE_HANDLE);
-            if partition_count == 0 {
-                return STATUS_PARTITION_UNKNOWN;
-            } else {
+            let partition_state = probe_partition_state(DEFAULT_DEVICE_HANDLE);
+            if partition_state == STATUS_OK {
                 return STATUS_OK;
+            } else {
+                return partition_state;
             }
         }
     }
 
     proc K::probe_all() {
+        emit "xdvfs-utils.probe: probe all";
+
         let fs_kind = blkid("all");
-        let list_status = lsblk();
         if fs_kind == FS_KIND_XDVFS {
+            let list_status = lsblk();
             if list_status == STATUS_OK {
-                return STATUS_OK;
+                let layout_status = probe_layout_contract();
+                if layout_status == STATUS_OK {
+                    return STATUS_OK;
+                } else {
+                    return layout_status;
+                }
             } else {
                 return list_status;
             }

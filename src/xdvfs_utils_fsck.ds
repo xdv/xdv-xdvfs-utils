@@ -9,43 +9,141 @@ forge XdvFsUtilsFsck {
     const STATUS_OK: UInt32 = 0;
     const STATUS_FSCK_FAILED: UInt32 = 1;
     const STATUS_REPAIR_REQUIRED: UInt32 = 2;
+    const STATUS_INVALID_DEVICE: UInt32 = 3;
+    const STATUS_PARTITION_MISSING: UInt32 = 4;
+    const STATUS_LAYOUT_INVALID: UInt32 = 5;
 
     const REPAIR_MODE_NONE: UInt32 = 0;
     const REPAIR_MODE_SAFE: UInt32 = 1;
     const REPAIR_MODE_AGGRESSIVE: UInt32 = 2;
 
-    const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
-    const DEFAULT_TOTAL_BLOCKS: UInt64 = 16384;
+    const PARTITION_STYLE_NONE: UInt32 = 0;
     const SUPERBLOCK_OK: UInt32 = 1;
 
-    proc K::fsck_xdvfs(device: Str, repair_mode: UInt32) {
-        emit "xdvfs-utils: fsck.xdvfs start";
+    const DEFAULT_DEVICE_HANDLE: UInt64 = 1;
+    const DEFAULT_TOTAL_BLOCKS: UInt64 = 16384;
 
-        let probe = probe_standard_storage();
-        if probe == 0 {
-            return STATUS_FSCK_FAILED;
+    proc K::resolve_device_handle(device: Str) {
+        return DEFAULT_DEVICE_HANDLE;
+    }
+
+    proc K::validate_partition_presence(device_handle: UInt64) {
+        let style = detect_partition_table(device_handle);
+        if style == PARTITION_STYLE_NONE {
+            return STATUS_PARTITION_MISSING;
         } else {
-            let style = detect_partition_table(DEFAULT_DEVICE_HANDLE);
-            if style == 0 {
-                return STATUS_FSCK_FAILED;
+            let count = enumerate_partitions(device_handle);
+            if count == 0 {
+                return STATUS_PARTITION_MISSING;
             } else {
-                let sb = create_superblock(DEFAULT_TOTAL_BLOCKS);
-                let valid = validate_superblock(sb);
-                if valid == SUPERBLOCK_OK {
-                    emit "xdvfs-utils: fsck.xdvfs complete";
+                let boot_partition = get_boot_partition(device_handle);
+                if boot_partition == 0 {
+                    return STATUS_PARTITION_MISSING;
+                } else {
+                    return STATUS_OK;
+                }
+            }
+        }
+    }
+
+    proc K::validate_xdvfs_layout_contract() {
+        let path_status = validate_required_paths(required_kernel_path_marker(), required_preload_path_marker());
+        if path_status == STATUS_OK {
+            let slot_status = validate_required_slots(kernel_slot_lba(), preload_slot_lba());
+            if slot_status == SUPERBLOCK_OK {
+                let inode_contract = validate_required_path_inodes(3, 4, 5);
+                if inode_contract == STATUS_OK {
                     return STATUS_OK;
                 } else {
-                    if repair_mode == REPAIR_MODE_NONE {
-                        return STATUS_REPAIR_REQUIRED;
+                    return STATUS_LAYOUT_INVALID;
+                }
+            } else {
+                return STATUS_LAYOUT_INVALID;
+            }
+        } else {
+            return STATUS_LAYOUT_INVALID;
+        }
+    }
+
+    proc K::validate_superblock_contract() {
+        let sb = create_superblock(DEFAULT_TOTAL_BLOCKS);
+        if sb == 0 {
+            return STATUS_LAYOUT_INVALID;
+        } else {
+            let valid = validate_superblock(sb);
+            if valid == SUPERBLOCK_OK {
+                return STATUS_OK;
+            } else {
+                return STATUS_LAYOUT_INVALID;
+            }
+        }
+    }
+
+    proc K::attempt_repair(device: Str, repair_mode: UInt32) {
+        if repair_mode == REPAIR_MODE_NONE {
+            return STATUS_REPAIR_REQUIRED;
+        } else {
+            if repair_mode == REPAIR_MODE_SAFE {
+                let check = check_filesystem(device);
+                if check == STATUS_OK {
+                    return STATUS_OK;
+                } else {
+                    let repaired = format_filesystem(device);
+                    if repaired == STATUS_OK {
+                        return STATUS_OK;
                     } else {
-                        let repaired = format_filesystem(device);
-                        if repaired == STATUS_OK {
+                        return STATUS_FSCK_FAILED;
+                    }
+                }
+            } else {
+                if repair_mode == REPAIR_MODE_AGGRESSIVE {
+                    let repaired = format_filesystem(device);
+                    if repaired == STATUS_OK {
+                        let verify = check_filesystem(device);
+                        if verify == STATUS_OK {
                             return STATUS_OK;
                         } else {
                             return STATUS_FSCK_FAILED;
                         }
+                    } else {
+                        return STATUS_FSCK_FAILED;
                     }
+                } else {
+                    return STATUS_FSCK_FAILED;
                 }
+            }
+        }
+    }
+
+    proc K::fsck_xdvfs(device: Str, repair_mode: UInt32) {
+        emit "xdvfs-utils.fsck: fsck.xdvfs start";
+
+        let probe = probe_standard_storage();
+        if probe == 0 {
+            return STATUS_INVALID_DEVICE;
+        } else {
+            let device_handle = resolve_device_handle(device);
+            let partition_status = validate_partition_presence(device_handle);
+            if partition_status == STATUS_OK {
+                let superblock_status = validate_superblock_contract();
+                if superblock_status == STATUS_OK {
+                    let layout_status = validate_xdvfs_layout_contract();
+                    if layout_status == STATUS_OK {
+                        let clean = check_filesystem(device);
+                        if clean == STATUS_OK {
+                            emit "xdvfs-utils.fsck: fsck.xdvfs clean";
+                            return STATUS_OK;
+                        } else {
+                            return attempt_repair(device, repair_mode);
+                        }
+                    } else {
+                        return attempt_repair(device, repair_mode);
+                    }
+                } else {
+                    return attempt_repair(device, repair_mode);
+                }
+            } else {
+                return partition_status;
             }
         }
     }
